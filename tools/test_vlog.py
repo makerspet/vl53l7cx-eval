@@ -103,6 +103,36 @@ def test_peak_finder():
         assert len(two) == 2 and abs(x[two[1]] - 1100) < 100
 
 
+def test_floor_fit_recovers_pose():
+    import floor
+
+    tx, ty = floor.ray_tans(8)
+    h, tilt, roll = 95.0, np.radians(25), np.radians(4)
+    # Floor normal 'up' in the sensor frame for a sensor tilted down by `tilt`, rolled by `roll`.
+    up = np.array([np.sin(roll) * np.cos(tilt), np.cos(roll) * np.cos(tilt), -np.sin(tilt)])
+    with np.errstate(divide="ignore", invalid="ignore"):
+        z = h / -(np.stack([tx, ty, np.ones_like(tx)], -1) @ up)  # perpendicular depth to the plane
+    z[z <= 0] = np.nan  # rays above the horizon
+    z[6, 2:5] = z[6, 2:5] * 0.5  # an object in front of the floor
+    fit = floor.fit_floor(z + np.random.default_rng(0).normal(0, 2, z.shape))
+    assert abs(fit.height_mm - h) < 3
+    assert abs(fit.tilt_deg - 25) < 1 and abs(fit.roll_deg - 4) < 1
+    assert not fit.inliers[6, 2:5].any()
+    hts = fit.heights(floor.points(z))
+    assert (hts[6, 2:5] > 20).all()
+
+
+def test_parse_text_log(tmp_path):
+    log = tmp_path / "log.txt"
+    rows = "\n".join("   " + " ".join(["  100"] * 7 + ["    ."]) for _ in range(8))
+    log.write_text(f"# junk\n\n[A cx 8x8] frame 12  read 17529 us  58 C\n{rows}\n\n"
+                   f"[A cx 8x8] frame 18  read 17000 us  57 C\n{rows}\n", encoding="utf-8")
+    fr = vlog.parse_text_log(log)
+    assert [f["frame"] for f in fr] == [12, 18]
+    assert fr[0]["distance_mm"].shape == (8, 8) and np.isnan(fr[0]["distance_mm"][0, 7])
+    assert fr[1]["temp_c"] == 57 and fr[1]["port"] == "A" and fr[1]["driver"] == "cx"
+
+
 def test_analyze_runs(capsys):
     with tempfile.TemporaryDirectory() as d:
         path = Path(d) / "t.vlog"

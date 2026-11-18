@@ -35,7 +35,7 @@ Pins are set in [firmware/vl53l7_eval/config.h](firmware/vl53l7_eval/config.h). 
 1. Arduino IDE → Boards Manager: **esp32** by Espressif. Built against 2.0.17; 3.x should work but is untested.
 2. Library Manager: **STM32duino VL53L7CX** (1.0.3) and **STM32duino VL53L7CH** (1.0.0).
 3. Open [firmware/vl53l7_eval/vl53l7_eval.ino](firmware/vl53l7_eval/vl53l7_eval.ino), board **ESP32 Dev Module**, upload.
-4. Serial Monitor at **921600** baud shows a distance grid per sensor (`.` = no valid target) and the CH's centre-zone histogram. Type `help` for commands.
+4. Serial Monitor at **1000000** baud shows a distance grid per sensor (`.` = no valid target) and the CH's centre-zone histogram. Type `help` for commands.
 
 Each port can run either ST driver against whichever board is attached:
 
@@ -86,7 +86,15 @@ Captures go to `captures/` (git-ignored) as raw frames (`.vlog`) plus a `.json` 
 
 The waterfall plot (`--plot --zone r,c`) shows the histogram over time, with the ranged distance overlaid. Use it to check any number the peak heuristic produces.
 
-`py -m pytest tools` runs offline tests of the frame format and analysis.
+**Serial Monitor logs.** A text log saved from the Serial Monitor can be turned into a video:
+
+```
+py tools/textlog_video.py data/<log>.txt          # writes data/<log>.mp4 (or --out x.gif)
+```
+
+Each frame shows the depth map, every zone's height above a floor plane fitted to that frame, a side view and a top view, plus the fitted sensor height, tilt and roll ([tools/floor.py](tools/floor.py)). The sensor reports depth along its optical axis, and the near rows fit a plane to a few mm. Heights of far zones are coarse: each zone is 7.5° wide, and the plane is extrapolated from near rows.
+
+`py -m pytest tools` runs offline tests of the frame format, floor fit and analysis.
 
 ## Test plan
 
@@ -123,7 +131,9 @@ firmware/vl53l7_eval/   Arduino sketch (ESP32)
 tools/
   capture.py            configure, record, live view
   analyze.py            per-zone stats, histogram second-peak analysis
-  vlog.py               frame parser and capture loader
+  vlog.py               frame parser, capture loader, Serial Monitor log parser
+  floor.py              floor-plane fit, sensor pose, heights above floor
+  textlog_video.py      Serial Monitor log -> video
 ```
 
 ### Notes on the ST libraries

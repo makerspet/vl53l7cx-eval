@@ -2,7 +2,7 @@
 //
 // Reads both sensors at once, each on its own I2C bus, and streams ranging
 // results (and CNH histograms from the CH driver) over USB serial.
-//   - Arduino Serial Monitor at 921600 baud: text view + commands (type `help`)
+//   - Arduino Serial Monitor at 1000000 baud: text view + commands (type `help`)
 //   - tools/capture.py: switches to binary mode and records everything
 //
 // Needs the "STM32duino VL53L7CX" and "STM32duino VL53L7CH" libraries

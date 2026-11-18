@@ -27,8 +27,9 @@
 // 400000`) if init fails or frames come back corrupted with long jumper wires.
 #define I2C_HZ_DEFAULT 1000000
 
-// CP2102 and CH340 USB-UART bridges both handle 921600.
-#define SERIAL_BAUD 921600
+// 1 Mbaud: offered by the Arduino Serial Monitor (921600 is not) and handled
+// by the CP2102 and CH340 USB-UART bridges. tools/capture.py defaults to it.
+#define SERIAL_BAUD 1000000
 
 // In text mode, print at most one frame per port every TEXT_MS_DEFAULT ms.
 #define TEXT_MS_DEFAULT 500

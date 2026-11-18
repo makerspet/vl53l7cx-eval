@@ -244,7 +244,7 @@ def live_view(state: dict, reader: Reader, args) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--port", required=True, help="serial port, e.g. COM5")
-    ap.add_argument("--baud", type=int, default=921600)
+    ap.add_argument("--baud", type=int, default=1000000, help="must match SERIAL_BAUD in config.h")
     ap.add_argument("--label", default="capture", help="appended to the file name")
     ap.add_argument("--notes", default="", help="free text stored in the .json sidecar")
     ap.add_argument("--seconds", type=float, default=0, help="record this long (0 = until Ctrl+C / window closed)")

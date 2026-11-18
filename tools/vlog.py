@@ -10,6 +10,7 @@ same parser reads a live port and a file.
 from __future__ import annotations
 
 import json
+import re
 import struct
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -200,6 +201,38 @@ class Capture:
     logs: list
     meta: dict
     crc_errors: int
+
+
+_TEXT_HDR = re.compile(r"\[([AB]) (\w+) (\d+)x\d+\] frame (\d+)\s+read (\d+) us\s+(-?\d+) C")
+
+
+def parse_text_log(path: str | Path) -> list[dict]:
+    """Frames from a saved Arduino Serial Monitor (text mode) log.
+
+    Text mode prints one frame per port every TEXT_MS, target 0 only, and
+    only zones with a valid status; other zones become NaN.
+    """
+    frames: list[dict] = []
+    cur = None
+    for line in Path(path).read_text(encoding="utf-8", errors="replace").splitlines():
+        m = _TEXT_HDR.search(line)
+        if m:
+            side = int(m.group(3))
+            cur = dict(port=m.group(1), driver=m.group(2), side=side, frame=int(m.group(4)),
+                       read_us=int(m.group(5)), temp_c=int(m.group(6)), rows=[])
+            frames.append(cur)
+            continue
+        if cur is None or len(cur["rows"]) >= cur["side"]:
+            continue
+        toks = line.split()
+        if len(toks) == cur["side"] and all(t == "." or t.lstrip("-").isdigit() for t in toks):
+            cur["rows"].append([np.nan if t == "." else float(t) for t in toks])
+    out = []
+    for f in frames:
+        if len(f["rows"]) == f["side"]:
+            f["distance_mm"] = np.array(f.pop("rows"))
+            out.append(f)
+    return out
 
 
 def load(path: str | Path) -> Capture:
